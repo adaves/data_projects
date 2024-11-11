@@ -5,8 +5,17 @@ import random
 import string
 import time
 import pandas as pd
+import os
+from dotenv import load_dotenv
 
-API_KEY = "AIzaSyBaGii4tvf4V54gCue1uhj1_LdKrSu0oE4"
+# load environment variables from .env file
+load_dotenv()
+
+# GET API KEY FROM .env file
+API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+if not API_KEY:
+    raise ValueError("API Key not found. Please set it in your .env file.")
 
 
 # Function to generate a random search query (e.g., a random letter)
@@ -107,7 +116,7 @@ books_list = fetch_books_data(10000)
 
 
 # Function to save books data to CSV
-def save_to_csv(books, filename="random_books_data_4.csv"):
+def save_to_csv(books, filename="random_books_data_5.csv"):
     df = pd.DataFrame(books)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")

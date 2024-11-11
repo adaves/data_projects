@@ -2,9 +2,18 @@ import requests
 import random
 import string
 import time
+import os
 import pandas as pd
+from dotenv import load_dotenv
 
-API_KEY = "AIzaSyBaGii4tvf4V54gCue1uhj1_LdKrSu0oE4"
+# load environment variables from .env file
+load_dotenv()
+
+# GET API KEY FROM .env file
+API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+if not API_KEY:
+    raise ValueError("API Key not found. Please set it in your .env file.")
 
 
 # Function to generate a random search query (e.g., a random letter)
