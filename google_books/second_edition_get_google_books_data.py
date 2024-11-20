@@ -1,10 +1,17 @@
 import requests
 import random
-import string
 import time
 import os
 import pandas as pd
 from dotenv import load_dotenv
+import logging
+
+# Set up logging to a file
+logging.basicConfig(
+    filename="get_google_books_data.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+)
 
 # load environment variables from .env file
 load_dotenv()
@@ -129,7 +136,7 @@ def parse_and_filter_books(data):
 
 
 # Function to save books data to CSV
-def save_to_csv(books, filename="filtered_books_data.csv"):
+def save_to_csv(books, filename="random_books_data_20.csv"):
     df = pd.DataFrame(books)
     df.to_csv(filename, index=False)
     print(f"Data saved to {filename}")
