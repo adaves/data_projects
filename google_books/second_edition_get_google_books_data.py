@@ -13,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# load environment variables from .env file
+# Load environment variables from .env file
 load_dotenv()
 
 # GET API KEY FROM .env file
@@ -23,8 +23,13 @@ if not API_KEY:
     raise ValueError("API Key not found. Please set it in your .env file.")
 
 
-# Function to generate a random search query (e.g., a random letter)
 def get_random_query():
+    """
+    Generate a random search query from a list of popular topics.
+
+    Returns:
+        str: A randomly chosen topic from the list.
+    """
     popular_topics = [
         "science",
         "history",
@@ -38,8 +43,16 @@ def get_random_query():
     return random.choice(popular_topics)
 
 
-# Function to fetch book data from Google Books API with pagination
 def fetch_books_data(target_count=10000):
+    """
+    Fetch book data from Google Books API with pagination.
+
+    Args:
+        target_count (int): The target number of books to fetch.
+
+    Returns:
+        list: A list of dictionaries containing book data.
+    """
     books = []
     max_per_request = 40  # Maximum allowed by Google Books API
 
@@ -94,8 +107,18 @@ def fetch_books_data(target_count=10000):
     return books
 
 
-# Function to get the next file name
 def get_next_filename(directory, base_filename="random_books_data_", extension=".csv"):
+    """
+    Get the next available filename by incrementing the index.
+
+    Args:
+        directory (str): The directory where files are saved.
+        base_filename (str): The base name of the file.
+        extension (str): The file extension.
+
+    Returns:
+        str: The next available filename.
+    """
     existing_files = os.listdir(directory)
     max_index = 0
     for filename in existing_files:
@@ -109,16 +132,24 @@ def get_next_filename(directory, base_filename="random_books_data_", extension="
     return f"{base_filename}{max_index + 1}{extension}"
 
 
-# Function to save books data to CSV
 def save_to_csv(
     books,
     directory=r"C:\Users\adame\OneDrive\Desktop\python_scripts\data_projects\google_books",
     base_filename="random_books_data_",
     extension=".csv",
 ):
+    """
+    Save books data to a CSV file.
+
+    Args:
+        books (list): A list of dictionaries containing book data.
+        directory (str): The directory where the file will be saved.
+        base_filename (str): The base name of the file.
+        extension (str): The file extension.
+    """
     # Ensure the directory exists
     os.makedirs(directory, exist_ok=True)
-    
+
     filename = get_next_filename(directory, base_filename, extension)
     filepath = os.path.join(directory, filename)
     df = pd.DataFrame(books)
