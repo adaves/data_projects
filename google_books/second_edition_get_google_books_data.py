@@ -10,7 +10,7 @@ import logging
 logging.basicConfig(
     filename="get_google_books_data.log",
     level=logging.INFO,
-    format="%(asctime)s - %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 # load environment variables from .env file
@@ -25,7 +25,6 @@ if not API_KEY:
 
 # Function to generate a random search query (e.g., a random letter)
 def get_random_query():
-    # Use popular topics instead of random letters to get better results
     popular_topics = [
         "science",
         "history",
@@ -59,100 +58,90 @@ def fetch_books_data(target_count=10000):
                 if "items" not in data:
                     break  # No more items available for this query
 
-                # Parse and add the filtered books from this page
-                filtered_books = parse_and_filter_books(data)
-                books.extend(filtered_books)
-                print(f"Fetched {len(books)} books so far.")
-
-                # Stop if we've reached the target count
-                if len(books) >= target_count:
-                    break
-
-                # Update start_index for next batch of results
+                for item in data["items"]:
+                    volume_info = item["volumeInfo"]
+                    book = {
+                        "Title": volume_info.get("title", "N/A"),
+                        "Authors": ", ".join(volume_info.get("authors", ["N/A"])),
+                        "Publisher": volume_info.get("publisher", "N/A"),
+                        "PublishedDate": volume_info.get("publishedDate", "N/A"),
+                        "ISBN": next(
+                            (
+                                identifier["identifier"]
+                                for identifier in volume_info.get(
+                                    "industryIdentifiers", []
+                                )
+                                if identifier["type"] == "ISBN_13"
+                            ),
+                            "N/A",
+                        ),
+                        "PageCount": volume_info.get("pageCount", "N/A"),
+                        "Categories": ", ".join(volume_info.get("categories", ["N/A"])),
+                        "AverageRating": volume_info.get("averageRating", "N/A"),
+                        "RatingsCount": volume_info.get("ratingsCount", "N/A"),
+                        "Language": volume_info.get("language", "N/A"),
+                    }
+                    books.append(book)
                 start_index += max_per_request
-
+                time.sleep(1)  # To avoid hitting the rate limit
             elif response.status_code == 429:
-                # Handle rate limiting by waiting before retrying with user input option
-                user_input = (
-                    input(
-                        "Rate limit exceeded. End program or continue to wait? Enter 'end' or 'wait': "
-                    )
-                    .strip()
-                    .lower()
-                )
-
-                if user_input == "end":
-                    print("Ending program and saving fetched data...")
-                    return books  # Return fetched books so far
-
-                elif user_input == "wait":
-                    print("Waiting for 60 seconds before retrying...")
-                    time.sleep(60)  # Wait before retrying
-                else:
-                    print("Invalid input. Continuing to wait.")
-                    time.sleep(60)  # Default behavior if input is invalid
-
+                logging.error("Rate limit hit. Saving fetched data and exiting.")
+                return books
             else:
-                print(f"Error fetching data: {response.status_code}")
-                break  # Stop on other errors
-
-    return books[:target_count]  # Return only up to the target count
-
-
-# Function to filter out books with incomplete data
-def parse_and_filter_books(data):
-    books = []
-    for item in data.get("items", []):
-        volume_info = item.get("volumeInfo", {})
-
-        # Check if important fields are present (e.g., averageRating, authors, ISBN)
-        if (
-            volume_info.get("averageRating")
-            and volume_info.get("authors")
-            and volume_info.get("industryIdentifiers")
-        ):
-            book = {
-                "Title": volume_info.get("title", "N/A"),
-                "Authors": ", ".join(volume_info.get("authors", ["N/A"])),
-                "Publisher": volume_info.get("publisher", "N/A"),
-                "PublishedDate": volume_info.get("publishedDate", "N/A"),
-                "ISBN": next(
-                    (
-                        identifier["identifier"]
-                        for identifier in volume_info.get("industryIdentifiers", [])
-                        if identifier["type"] == "ISBN_13"
-                    ),
-                    "N/A",
-                ),
-                "PageCount": volume_info.get("pageCount", "N/A"),
-                "Categories": ", ".join(volume_info.get("categories", ["N/A"])),
-                "AverageRating": volume_info.get("averageRating", "N/A"),
-                "RatingsCount": volume_info.get("ratingsCount", "N/A"),
-                "Language": volume_info.get("language", "N/A"),
-            }
-            books.append(book)
+                logging.error(f"Failed to fetch data: {response.status_code}")
+                break
 
     return books
 
 
+# Function to get the next file name
+def get_next_filename(directory, base_filename="random_books_data_", extension=".csv"):
+    existing_files = os.listdir(directory)
+    max_index = 0
+    for filename in existing_files:
+        if filename.startswith(base_filename) and filename.endswith(extension):
+            try:
+                index = int(filename[len(base_filename) : -len(extension)])
+                if index > max_index:
+                    max_index = index
+            except ValueError:
+                continue
+    return f"{base_filename}{max_index + 1}{extension}"
+
+
 # Function to save books data to CSV
-def save_to_csv(books, filename="random_books_data_20.csv"):
+def save_to_csv(
+    books,
+    directory=r"C:\Users\adame\OneDrive\Desktop\python_scripts\data_projects\google_books",
+    base_filename="random_books_data_",
+    extension=".csv",
+):
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+    
+    filename = get_next_filename(directory, base_filename, extension)
+    filepath = os.path.join(directory, filename)
     df = pd.DataFrame(books)
-    df.to_csv(filename, index=False)
-    print(f"Data saved to {filename}")
+    df.to_csv(filepath, index=False)
+    logging.info(f"Data saved to {filepath}")
+    print(f"Data saved to {filepath}")
 
 
 if __name__ == "__main__":
     try:
+        logging.info("Script started.")
         # Fetch book data targeting 10,000 filtered books (or any number you prefer)
         books_list = fetch_books_data(10000)
 
         # Save the fetched books to CSV
         if books_list:
             save_to_csv(books_list)
+        logging.info("Script finished successfully.")
 
     except KeyboardInterrupt:
         # Handle manual interruption (Ctrl+C)
+        logging.warning("Program interrupted. Saving fetched data...")
         print("\nProgram interrupted. Saving fetched data...")
         if books_list:
             save_to_csv(books_list)
+        logging.info("Data saved after interruption.")
